@@ -40,6 +40,7 @@ pub async fn leave(
 	room_id: &RoomId,
 	reason: Option<String>,
 	remote_leave_now: bool,
+	bypass_mandatory_announcements_policy: bool,
 	state_lock: &RoomMutexGuard,
 ) -> Result {
 	let default_member_content = RoomMemberEventContent {
@@ -76,6 +77,19 @@ pub async fn leave(
 			.await?;
 
 		return Ok(());
+	}
+
+	if !bypass_mandatory_announcements_policy
+		&& self.services.globals.user_is_local(user_id)
+		&& self
+			.services
+			.admin
+			.is_announcements_mandatory_room(room_id, user_id)
+			.await
+	{
+		return Err!(Request(Forbidden(
+			"You cannot leave the server announcements direct message with the bot.",
+		)));
 	}
 
 	let member_event = self

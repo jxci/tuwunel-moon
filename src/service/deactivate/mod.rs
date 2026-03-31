@@ -145,7 +145,7 @@ impl Service {
 			if let Err(e) = self
 				.services
 				.membership
-				.leave(user_id, &room_id, None, false, &state_lock)
+				.leave(user_id, &room_id, None, false, true, &state_lock)
 				.boxed()
 				.await
 			{

@@ -68,7 +68,7 @@ async fn do_ban_room(services: &Services, room_id: &RoomId) {
 
 		if let Err(e) = services
 			.membership
-			.leave(user_id, room_id, None, false, &state_lock)
+			.leave(user_id, room_id, None, false, true, &state_lock)
 			.boxed()
 			.await
 		{

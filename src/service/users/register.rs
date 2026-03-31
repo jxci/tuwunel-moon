@@ -167,6 +167,19 @@ pub async fn full_register(
 
 			drop(state_lock);
 		}
+
+		if self.services.server.config.announcements_dm_enabled {
+			if let Err(e) = crate::announcements::ensure_announcements_dm_for_user(
+				self.services.get().as_ref(),
+				user_id,
+			)
+			.await
+			{
+				error!("Failed to ensure announcements DM for user {user_id}: {e}");
+			} else {
+				info!("Ensured announcements DM for user {user_id}");
+			}
+		}
 	}
 
 	Ok(())

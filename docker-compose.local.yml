@@ -1,0 +1,62 @@
+x-tuwunel-environment: &tuwunel-environment
+  TUWUNEL_SERVER_NAME: localhost
+  TUWUNEL_DATABASE_PATH: /var/lib/tuwunel
+  TUWUNEL_ADDRESS: 0.0.0.0
+  TUWUNEL_PORT: "8008"
+  TUWUNEL_MAX_REQUEST_SIZE: "20000000"
+  TUWUNEL_ALLOW_REGISTRATION: "true"
+  TUWUNEL_REGISTRATION_TOKEN: "localdev"
+  TUWUNEL_ALLOW_FEDERATION: "false"
+  TUWUNEL_GRANT_ADMIN_TO_FIRST_USER: "true"
+  TUWUNEL_ANNOUNCEMENTS_DM_ENABLED: "true"
+  TUWUNEL_ANNOUNCEMENTS_BOT_LOCALPART: "system_notices"
+  TUWUNEL_ANNOUNCEMENTS_DM_ROOM_NAME: "Системные уведомления"
+  TUWUNEL_ANNOUNCEMENTS_DM_ROOM_TOPIC: "Системные и важные уведомления сервера, в том числе об обновлениях и безопасности."
+  TUWUNEL_ANNOUNCEMENTS_DM_WELCOME_MESSAGE_PATH: "/etc/tuwunel/system_notices_welcome.md"
+  TUWUNEL_FEDERATE_ANNOUNCEMENTS_DM: "false"
+  TUWUNEL_ANNOUNCEMENTS_DM_PREVENT_LEAVE: "true"
+  TUWUNEL_LOG: "info"
+  TUWUNEL_WELL_KNOWN__CLIENT: "http://127.0.0.1:8008/"
+  TUWUNEL_IDENTITY_PROVIDER__TUWUNEL__BRAND: "ntid"
+  TUWUNEL_IDENTITY_PROVIDER__TUWUNEL__CLIENT_ID: "tuwunel"
+  TUWUNEL_IDENTITY_PROVIDER__TUWUNEL__CLIENT_SECRET: "${KEYCLOAK_CLIENT_SECRET}"
+  TUWUNEL_IDENTITY_PROVIDER__TUWUNEL__ISSUER_URL: "http://127.0.0.1:8081/realms/moon-chat"
+  TUWUNEL_IDENTITY_PROVIDER__TUWUNEL__DISCOVERY_URL: "http://host.docker.internal:8081/realms/moon-chat/.well-known/openid-configuration"
+  TUWUNEL_IDENTITY_PROVIDER__TUWUNEL__TOKEN_URL: "http://host.docker.internal:8081/realms/moon-chat/protocol/openid-connect/token"
+  TUWUNEL_IDENTITY_PROVIDER__TUWUNEL__USERINFO_URL: "http://host.docker.internal:8081/realms/moon-chat/protocol/openid-connect/userinfo"
+  TUWUNEL_IDENTITY_PROVIDER__TUWUNEL__TRUSTED: "true"
+  TUWUNEL_IDENTITY_PROVIDER__TUWUNEL__NAME: "NT ID"
+
+services:
+  tuwunel:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    image: tuwunel-local:dev
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8008:8008"
+    volumes:
+      - tuwunel-local-data:/var/lib/tuwunel
+      - ./resources/system_notices_welcome.ru.md:/etc/tuwunel/system_notices_welcome.md:ro
+    environment: *tuwunel-environment
+
+  tuwunel_host_bin:
+    profiles: ["host-bin"]
+    image: debian:bookworm-slim
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8008:8008"
+    volumes:
+      - tuwunel-local-data:/var/lib/tuwunel
+      - ./resources/system_notices_welcome.ru.md:/etc/tuwunel/system_notices_welcome.md:ro
+      - ./target/release/tuwunel:/usr/local/bin/tuwunel:ro
+    environment: *tuwunel-environment
+    entrypoint: ["/usr/local/bin/tuwunel"]
+
+volumes:
+  tuwunel-local-data:

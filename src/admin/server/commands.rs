@@ -1,6 +1,7 @@
 use std::{fmt::Write, path::PathBuf, sync::Arc};
 
 use futures::TryStreamExt;
+use ruma::events::room::message::RoomMessageEventContent;
 use tuwunel_core::{
 	Err, Result, info,
 	utils::{stream::IterStream, time},
@@ -119,6 +120,32 @@ pub(super) async fn admin_notice(&self, message: Vec<String>) -> Result {
 	self.services.admin.send_text(&message).await;
 
 	self.write_str("Notice was sent to #admins").await
+}
+
+#[admin_command]
+pub(super) async fn announcements_send(&self, message: Vec<String>) -> Result {
+	let message = message.join(" ");
+	self.services
+		.admin
+		.send_announcements_message(RoomMessageEventContent::text_markdown(&message))
+		.await?;
+
+	self
+		.write_str(
+			"Сообщение отправлено от бота системных уведомлений в личный канал каждого пользователя.",
+		)
+		.await
+}
+
+#[admin_command]
+pub(super) async fn announcements_retag(&self) -> Result {
+	tuwunel_service::announcements::backfill_announcements_dm_room_tags(&self.services).await?;
+
+	self
+		.write_str(
+			"Применены теги комнат (m.tag) для каналов системных уведомлений у всех локальных пользователей.",
+		)
+		.await
 }
 
 #[admin_command]

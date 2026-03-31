@@ -1981,6 +1981,65 @@ pub struct Config {
 	#[serde(default = "true_fn")]
 	pub federate_admin_room: bool,
 
+	/// When true, the homeserver maintains a **direct (1:1) room** between each
+	/// local user and [`announcements_bot_localpart`](Self::announcements_bot_localpart)
+	/// for server-wide notices. Messages are sent as that bot user, not in a
+	/// shared public room.
+	///
+	/// default: false
+	#[serde(default)]
+	pub announcements_dm_enabled: bool,
+
+	/// Localpart of the dedicated system-notices user (e.g. `system_notices`
+	/// gives `@system_notices:your.server`). Created automatically when
+	/// [`announcements_dm_enabled`](Self::announcements_dm_enabled) is used.
+	///
+	/// default: "system_notices"
+	#[serde(default = "default_announcements_bot_localpart")]
+	pub announcements_bot_localpart: String,
+
+	/// Whether system-notices DM rooms federate. Cannot be changed after a room
+	/// is created.
+	///
+	/// default: false
+	#[serde(default)]
+	pub federate_announcements_dm: bool,
+
+	/// `m.room.name` for each system-notices DM room.
+	///
+	/// default: "Системные уведомления"
+	#[serde(default = "default_announcements_dm_room_name")]
+	pub announcements_dm_room_name: String,
+
+	/// `m.room.topic` for each announcements DM room.
+	///
+	/// default: see `default_announcements_dm_room_topic`
+	#[serde(default = "default_announcements_dm_room_topic")]
+	pub announcements_dm_room_topic: String,
+
+	/// If true, local users cannot voluntarily leave their announcements DM
+	/// with the bot (deactivation and admin force-leave still bypass this).
+	///
+	/// default: true
+	#[serde(default = "true_fn")]
+	pub announcements_dm_prevent_leave: bool,
+
+	/// Per-user `m.tag` keys (room account data) applied to each announcements DM for **both**
+	/// the human and the system-notices bot. Empty list disables tagging. Clients (e.g. a forked
+	/// Element) can use these to show an official/service banner and recognize server notices.
+	/// See `docs/announcements_dm_client.md`.
+	///
+	/// default: `m.server_notice` and `org.tuwunel.official_announcements`
+	#[serde(default = "default_announcements_dm_room_tags")]
+	pub announcements_dm_room_tags: Vec<String>,
+
+	/// Markdown file on disk to send **once** from the system-notices bot as the first message in
+	/// each user’s DM (after the room exists). Applies to new users and to existing users via a
+	/// one-time migration (`announcements_welcome_v1_backfill` in the global DB). Unset or empty
+	/// file disables.
+	#[serde(default)]
+	pub announcements_dm_welcome_message_path: Option<PathBuf>,
+
 	/// Sentry.io crash/panic reporting, performance monitoring/metrics, etc.
 	/// This is NOT enabled by default. tuwunel's default Sentry reporting
 	/// endpoint domain is `o4509498990067712.ingest.us.sentry.io`.
@@ -3469,6 +3528,21 @@ fn default_admin_log_capture() -> String {
 }
 
 fn default_admin_room_tag() -> String { "m.server_notice".to_owned() }
+
+fn default_announcements_bot_localpart() -> String { "system_notices".to_owned() }
+
+fn default_announcements_dm_room_name() -> String { "Системные уведомления".to_owned() }
+
+fn default_announcements_dm_room_topic() -> String {
+	"Системные и важные уведомления сервера, в том числе об обновлениях и безопасности.".to_owned()
+}
+
+fn default_announcements_dm_room_tags() -> Vec<String> {
+	vec![
+		"m.server_notice".to_owned(),
+		"org.tuwunel.official_announcements".to_owned(),
+	]
+}
 
 #[expect(clippy::as_conversions, clippy::cast_precision_loss)]
 fn parallelism_scaled_f64(val: f64) -> f64 { val * (sys::available_parallelism() as f64) }

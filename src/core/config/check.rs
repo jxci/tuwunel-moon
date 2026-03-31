@@ -178,6 +178,15 @@ pub fn check(config: &Config) -> Result {
 		));
 	}
 
+	if let Some(ref path) = config.announcements_dm_welcome_message_path {
+		if !path.exists() {
+			warn!(
+				"announcements_dm_welcome_message_path is set but file does not exist: {:?}",
+				path
+			);
+		}
+	}
+
 	if config.max_request_size < 10_000_000 {
 		return Err!(Config(
 			"max_request_size",

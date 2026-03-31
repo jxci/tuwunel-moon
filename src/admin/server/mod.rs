@@ -51,6 +51,16 @@ pub(super) enum ServerCommand {
 		message: Vec<String>,
 	},
 
+	/// - Post a markdown message to every local user's system-notices DM (from
+	///   the configured localpart, e.g. `@system_notices`, when `announcements_dm_enabled` is true).
+	AnnouncementsSend {
+		message: Vec<String>,
+	},
+
+	/// - Re-apply configured `m.tag` keys on every local user's system-notices DM (human +
+	///   bot), e.g. after changing `announcements_dm_room_tags`.
+	AnnouncementsRetag,
+
 	/// - Hot-reload the server
 	#[clap(alias = "reload")]
 	ReloadMods,

@@ -76,6 +76,19 @@ async fn fresh(services: &Services) -> Result {
 			.await?;
 	}
 
+	if services.config.announcements_dm_enabled {
+		crate::announcements::ensure_announcements_bot_user(services)
+			.boxed()
+			.await?;
+		crate::announcements::backfill_announcements_dms_for_all_local_users(services)
+			.boxed()
+			.await?;
+	}
+
+	db["global"].insert(b"announcements_dm_backfill", []);
+	db["global"].insert(b"announcements_dm_tags_backfill", []);
+	db["global"].insert(b"announcements_welcome_v1_backfill", []);
+
 	warn!("Created new RocksDB database with version {DATABASE_VERSION}");
 
 	Ok(())
@@ -158,6 +171,64 @@ async fn migrate(services: &Services) -> Result {
 	if services.globals.db.database_version().await < 17 {
 		services.globals.db.bump_database_version(17);
 		info!("Migration: Bumped database version to 17");
+	}
+
+	if db["global"]
+		.get(b"announcements_dm_backfill")
+		.await
+		.is_not_found()
+	{
+		if config.announcements_dm_enabled {
+			crate::announcements::ensure_announcements_bot_user(services)
+				.boxed()
+				.await?;
+			crate::announcements::backfill_announcements_dms_for_all_local_users(services)
+				.boxed()
+				.await?;
+		}
+		db["global"].insert(b"announcements_dm_backfill", []);
+	}
+
+	if db["global"]
+		.get(b"announcements_dm_tags_backfill")
+		.await
+		.is_not_found()
+	{
+		if config.announcements_dm_enabled && !config.announcements_dm_room_tags.is_empty() {
+			crate::announcements::backfill_announcements_dm_room_tags(services)
+				.boxed()
+				.await?;
+		}
+		db["global"].insert(b"announcements_dm_tags_backfill", []);
+	}
+
+	if db["global"]
+		.get(b"announcements_welcome_v1_backfill")
+		.await
+		.is_not_found()
+	{
+		if config.announcements_dm_enabled && config.announcements_dm_welcome_message_path.is_some()
+		{
+			crate::announcements::ensure_announcements_bot_user(services)
+				.boxed()
+				.await?;
+			let bot: &UserId = services.globals.announcements_bot_user.as_ref();
+			let users: Vec<OwnedUserId> = services
+				.users
+				.list_local_users()
+				.ready_filter(|u| *u != bot)
+				.map(|u| u.to_owned())
+				.collect()
+				.await;
+			for user_id in users {
+				if let Err(e) =
+					crate::announcements::ensure_announcements_dm_for_user(services, &user_id).await
+				{
+					warn!(%user_id, %e, "Failed during system notices welcome migration");
+				}
+			}
+		}
+		db["global"].insert(b"announcements_welcome_v1_backfill", []);
 	}
 
 	assert_eq!(

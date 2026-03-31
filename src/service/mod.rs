@@ -9,6 +9,7 @@ pub mod services;
 
 pub mod account_data;
 pub mod admin;
+pub mod announcements;
 pub mod appservice;
 pub mod client;
 pub mod config;

@@ -1698,6 +1698,24 @@
 #
 #federate_admin_room = true
 
+# Per-user system notices as 1:1 DMs with @system_notices:your.server (not a shared
+# public room). New users get a DM on register; existing users are backfilled once
+# per database (see migrations).
+#
+#announcements_dm_enabled = false
+#announcements_bot_localpart = "system_notices"
+#federate_announcements_dm = false
+#announcements_dm_room_name = "Системные уведомления"
+#announcements_dm_room_topic = "Системные и важные уведомления сервера, в том числе об обновлениях и безопасности."
+#announcements_dm_prevent_leave = true
+# Room account data tag keys (`m.tag`) for each system-notices DM (human + bot). Empty list
+# disables. Defaults match element-web-moon contract (see docs/announcements_dm_client.md).
+#announcements_dm_room_tags = ["m.server_notice", "org.tuwunel.official_announcements"]
+# Optional: Markdown file on disk — sent once per user as the first bot message (new users +
+# one-time migration for existing accounts when `announcements_welcome_v1_backfill` runs).
+#example: "/etc/tuwunel/system_notices_welcome.md"
+#announcements_dm_welcome_message_path =
+
 # Sentry.io crash/panic reporting, performance monitoring/metrics, etc.
 # This is NOT enabled by default. tuwunel's default Sentry reporting
 # endpoint domain is `o4509498990067712.ingest.us.sentry.io`.

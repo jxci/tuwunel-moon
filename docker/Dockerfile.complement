@@ -59,6 +59,7 @@ COPY <<EOF complement.toml
     allow_public_room_directory_without_auth = true
     allow_registration = true
     create_admin_room = false
+    announcements_dm_enabled = false
     database_path = "/database"
     dns_attempts = 20
     dns_timeout = 60

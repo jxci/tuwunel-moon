@@ -18,7 +18,14 @@ pub(crate) async fn leave_room_route(
 
 	services
 		.membership
-		.leave(body.sender_user(), &body.room_id, body.reason.clone(), false, &state_lock)
+		.leave(
+			body.sender_user(),
+			&body.room_id,
+			body.reason.clone(),
+			false,
+			false,
+			&state_lock,
+		)
 		.boxed()
 		.await?;
 

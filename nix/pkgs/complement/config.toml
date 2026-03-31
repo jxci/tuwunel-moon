@@ -18,6 +18,7 @@ ip_range_denylist = []
 url_preview_domain_contains_allowlist = ["*"]
 url_preview_domain_explicit_denylist = ["*"]
 media_compat_file_link = false
+announcements_dm_enabled = false
 media_startup_check = true
 prune_missing_media = true
 log_colors = true

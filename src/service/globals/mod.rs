@@ -13,6 +13,9 @@ pub struct Service {
 	server: Arc<Server>,
 
 	pub server_user: OwnedUserId,
+	/// Dedicated local user for per-user system-notices DMs (see config
+	/// `announcements_bot_localpart`, default `system_notices`).
+	pub announcements_bot_user: OwnedUserId,
 	pub turn_secret: Option<String>,
 }
 
@@ -33,6 +36,12 @@ impl crate::Service for Service {
 			})
 			.or_else(|| config.turn_secret.clone());
 
+		let announcements_bot_user = UserId::parse_with_server_name(
+			config.announcements_bot_localpart.clone(),
+			&args.server.name,
+		)
+		.expect("system notices bot localpart produces valid user id");
+
 		Ok(Arc::new(Self {
 			db,
 			server: args.server.clone(),
@@ -41,6 +50,7 @@ impl crate::Service for Service {
 				&args.server.name,
 			)
 			.expect("@conduit:server_name is valid"),
+			announcements_bot_user,
 			turn_secret,
 		}))
 	}

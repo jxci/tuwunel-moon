@@ -10,14 +10,15 @@ use std::{
 
 use async_trait::async_trait;
 pub use create::create_admin_room;
-use futures::{Future, FutureExt, TryFutureExt};
+use futures::{Future, FutureExt, StreamExt, TryFutureExt};
 use ruma::{
-	OwnedEventId, OwnedRoomAliasId, OwnedRoomId, RoomId, UserId,
+	OwnedEventId, OwnedRoomAliasId, OwnedRoomId, OwnedUserId, RoomId, UserId,
 	events::room::message::{Relation, RoomMessageEventContent},
 };
 use tokio::sync::{RwLock, mpsc};
 use tuwunel_core::{
-	Err, Error, Event, Result, debug, err, error, error::default_log, pdu::PduBuilder,
+	Err, Error, Event, Result, debug, err, error, error::default_log, pdu::PduBuilder, utils::ReadyExt,
+	warn,
 };
 
 use crate::rooms::state::RoomMutexGuard;
@@ -146,6 +147,68 @@ impl Service {
 		self.respond_to_room(message_content, &room_id, user_id)
 			.boxed()
 			.await
+	}
+
+	/// Sends a markdown/text message as the announcements bot to each local user's
+	/// announcements DM (see `announcements_dm_enabled`).
+	pub async fn send_announcements_message(
+		&self,
+		message_content: RoomMessageEventContent,
+	) -> Result {
+		if !self.services.server.config.announcements_dm_enabled {
+			return Err!(Request(InvalidParam(
+				"Системные уведомления отключены в конфигурации сервера.",
+			)));
+		}
+
+		let services = self.services.get().as_ref();
+		let bot: &UserId = self.services.globals.announcements_bot_user.as_ref();
+		crate::announcements::ensure_announcements_bot_user(services).await?;
+
+		let users: Vec<OwnedUserId> = self
+			.services
+			.users
+			.list_local_users()
+			.ready_filter(|u| *u != bot)
+			.map(|u| u.to_owned())
+			.collect()
+			.await;
+
+		let mut ok_count = 0usize;
+		for user_id in users {
+			match async {
+				crate::announcements::ensure_announcements_dm_for_user(services, &user_id)
+					.await?;
+				let Some(room_id) =
+					crate::announcements::find_announcements_dm_room(services, &user_id)
+						.await?
+				else {
+					return Err!(Request(NotFound(
+						"Комната системных уведомлений не найдена после ensure; это ошибка сервера.",
+					)));
+				};
+				crate::announcements::append_room_message(
+					services,
+					bot,
+					&room_id,
+					message_content.clone(),
+				)
+				.await
+			}
+			.await
+			{
+				| Ok(()) => ok_count += 1,
+				| Err(e) => warn!(%user_id, %e, "Failed to send announcement DM"),
+			}
+		}
+
+		if ok_count == 0 {
+			return Err!(Request(NotFound(
+				"Ни одному локальному пользователю не доставлено сообщение (или все отправки не удались).",
+			)));
+		}
+
+		Ok(())
 	}
 
 	/// Posts a command to the command processor queue and returns. Processing
@@ -400,5 +463,25 @@ impl Service {
 			.map_ok(|room_id| room_id == room_id_)
 			.await
 			.unwrap_or(false)
+	}
+
+	/// Whether voluntary leave from this room should be forbidden for local
+	/// users (announcements DM with the bot).
+	#[must_use]
+	pub async fn is_announcements_mandatory_room(
+		&self,
+		room_id: &RoomId,
+		user_id: &UserId,
+	) -> bool {
+		if !self.services.server.config.announcements_dm_prevent_leave {
+			return false;
+		}
+
+		crate::announcements::room_is_announcements_dm_for_user(
+			self.services.get().as_ref(),
+			user_id,
+			room_id,
+		)
+		.await
 	}
 }
