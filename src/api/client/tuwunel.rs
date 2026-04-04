@@ -10,7 +10,7 @@ use ruma::api::client::error::ErrorKind::UnknownToken;
 use ruma::events::room::message::RoomMessageEventContent;
 use serde::Deserialize;
 use tuwunel_core::{
-	Err, Result, err, is_less_than, utils::result::LogDebugErr,
+	Err, Error::BadRequest, Result, err, is_less_than, utils::result::LogDebugErr,
 };
 
 /// # `GET /_tuwunel/server_version`
@@ -91,7 +91,7 @@ pub(crate) async fn tuwunel_announcements_send(
 		.users
 		.find_from_token(&token)
 		.await
-		.map_err(|_| err!(BadRequest(UnknownToken { soft_logout: false }, "Unknown access token.")))?;
+		.map_err(|_| BadRequest(UnknownToken { soft_logout: false }, "Unknown access token."))?;
 
 	if expires_at.is_some_and(is_less_than!(SystemTime::now())) {
 		services
@@ -101,7 +101,7 @@ pub(crate) async fn tuwunel_announcements_send(
 			.log_debug_err()
 			.ok();
 
-		return Err!(BadRequest(UnknownToken { soft_logout: true }, "Expired access token."));
+		return Err(BadRequest(UnknownToken { soft_logout: true }, "Expired access token."));
 	}
 
 	if !services.admin.user_is_admin(&user_id).await {
