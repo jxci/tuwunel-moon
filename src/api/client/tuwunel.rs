@@ -6,6 +6,7 @@ use axum::{
 	http::HeaderMap,
 	response::IntoResponse,
 };
+use futures::StreamExt;
 use ruma::api::client::error::ErrorKind::UnknownToken;
 use ruma::events::room::message::RoomMessageEventContent;
 use serde::Deserialize;
