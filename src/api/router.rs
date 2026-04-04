@@ -198,6 +198,14 @@ pub fn build(router: Router<State>, server: &Server) -> Router<State> {
 		.ruma_route(&client::well_known_support)
 		.ruma_route(&client::well_known_client)
 		.route("/_tuwunel/server_version", get(client::tuwunel_server_version))
+		.route(
+			"/_matrix/client/v3/tuwunel/announcements/send",
+			post(client::tuwunel_announcements_send),
+		)
+		.route(
+			"/_matrix/client/r0/tuwunel/announcements/send",
+			post(client::tuwunel_announcements_send),
+		)
 		.ruma_route(&client::room_initial_sync_route)
 		.route("/client/server.json", get(client::syncv3_client_server_json));
 
